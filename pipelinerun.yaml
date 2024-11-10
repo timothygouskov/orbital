@@ -1,0 +1,46 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: PipelineRun
+metadata:
+  generateName: orbital-run-
+spec:
+  pipelineRef:
+    name: orbital
+  podTemplate:
+    securityContext:
+      fsGroup: 65532
+  workspaces:
+  - name: shared-data
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 10Gi
+  - name: shared-dockerfile
+    volumeClaimTemplate:
+      spec:
+        accessModes:
+        - ReadWriteOnce
+        resources:
+          requests:
+            storage: 1Gi
+  - name: git-credentials
+    secret:
+      secretName: git-credentials
+  - name: docker-credentials
+    secret:
+      secretName: docker-credentials
+  params:
+  - name: repo-url
+    value: $ORBITAL_REPO_URL
+  - name: dockerfile-url
+    value: $ORBITAL_DOCKERFILE_URL
+  - name: ordinance-url
+    value: $ORBITAL_ORDINANCE_URL
+  - name: repo-branch
+    value: $ORBITAL_REPO_BRANCH
+  - name: image-reference
+    value: $ORBITAL_IMAGE_REFERENCE
+

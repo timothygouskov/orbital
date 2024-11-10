@@ -1,0 +1,6 @@
+pyyaml
+typer
+shellingham
+rich
+emoji
+dictor

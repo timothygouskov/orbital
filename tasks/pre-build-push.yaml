@@ -1,0 +1,97 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: pre-build-push
+spec:
+  description: |
+    Injects necessary Dockerfile into source repo
+  workspaces:
+  - name: source
+  params:
+    name: language
+    type: string
+  results:
+  - name: image-base
+    type: string
+  - name: repo-name
+    type: string
+  - name: image-ports
+    type: string
+  steps:
+  - name: script-pre-build-push
+    image: alpine:latest
+    script: |
+      #!/usr/bin/env sh
+      echo -e "###########################################################################################"
+      echo -e ">> Running apk update and installing jq!"
+      echo -e "###########################################################################################"
+      apk update
+      apk add jq
+      echo -e "###########################################################################################"
+      echo -e ">> Figuring out which language orbital builds for!"
+      echo -e "###########################################################################################"
+      LANGUAGE=$(params.language)
+      case $LANGUAGE in
+        python)
+            DOCKERFILE_PATH=$(workspaces.source.path)/dirDockerfiles/python/Dockerfile
+            BASE="python3.13:bookworm"
+            echo -n "Using python Dockerfile!"
+        ;;
+        ruby)
+            echo -n "Using ruby Dockerfile!"
+            DOCKERFILE_PATH=$(workspaces.source.path)/dirDockerfiles/ruby/Dockerfile
+            BASE="ruby3.3.6-bookworm"
+        ;;
+        cpp)
+            echo -n "Using c++ Dockerfile!"
+            DOCKERFILE_PATH=$(workspaces.source.path)/dirDockerfiles/cpp/Dockerfile
+            BASE="debian-bookworm"
+        ;;
+        java)
+            echo -n "Using java Dockerfile!"
+            DOCKERFILE_PATH=$(workspaces.source.path)/dirDockerfiles/java/Dockerfile
+            BASE="debian-bookworm"
+        ;;
+        javascript)
+            echo -n "Using javascript Dockerfile!"
+            DOCKERFILE_PATH=$(workspaces.source.path)/dirDockerfiles/javascript/Dockerfile
+            BASE="debian-bookworm"
+        ;;
+        go)
+            echo -n "Using go Dockerfile!"
+            DOCKERFILE_PATH=$(workspaces.source.path)/dirDockerfiles/go/Dockerfile\
+            BASE="golang:1.23.3-bookworm"
+        ;;
+        clojure)
+            echo -n "Using clojure Dockerfile!"
+            DOCKERFILE_PATH=$(workspaces.source.path)/dirDockerfiles/clojure/Dockerfile
+            BASE="debian-bookworm"
+        ;;
+        *)
+            echo -n "Looks like I don't have a specified language! Existing out of orbital!"
+            exit 1
+        ;;
+        esac
+
+      REPO=$(basename $(workspaces.source.path)/dirSource)
+      PORTS ## NOTE TODO - pass this as a starting arg
+      echo -e "###########################################################################################"
+      echo -e ">> Injecting dockerfile to source now! -- For the following repo!"
+       cp $DOCKERFILE_PATH $(workspaces.source.path)/dirSource/
+      echo -e ">> Here is how the final source directory looks!"
+      echo -e "###########################################################################################"
+      echo $(ls -la $(workspaces.source.path)/dirSource)
+      echo -e "###########################################################################################"
+      echo -e ">> Creating the results vars for kaniko now!"
+      echo -e "###########################################################################################"
+      printf $BASE | tee $(results.image-base.path)
+      printf $REPO | tee $(results.repo-name.path)
+      printf $PORTS | tee $(results.image-ports.path)  ## TODO
+      echo -e "###########################################################################################"
+      echo -e ">> Here is how the final dockerfile looks!"
+      echo -e "###########################################################################################"
+      TEST_INJECTED_DOCKERFILE=$(cat $(workspaces.source.path)/dirSource/Dockerfile)
+      echo $TEST_INJECTED_DOCKERFILE
+      echo -e "All Done!"
+

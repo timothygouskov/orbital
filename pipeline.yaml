@@ -1,0 +1,71 @@
+---
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: orbital
+spec:
+  params:
+  - name: repo-url
+    type: string
+  - name: repo-branch
+    type: string
+  - name: dockerfiles-url
+    type: string
+  - name: image-reference
+    type: string
+  workspaces:
+  - name: shared-data
+  - name: git-credentials
+  - name: docker-credentials
+  tasks:
+  - name: fetch-source ##########
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+      subPath: dirSource
+    - name: ssh-directory
+      workspace: git-credentials
+    params:
+    - name: url
+      value: $(params.repo-url)
+    - name: revision
+      value: $(params.repo-branch)
+  - name: fetch-dockerfiles ##########
+    runAfter: ["fetch-source"]
+    taskRef:
+      name: git-clone
+    workspaces:
+    - name: output
+      workspace: shared-data
+      subPath: dirDockerfile
+    - name: ssh-directory
+      workspace: git-credentials
+    params:
+    - name: url
+      value: $(params.dockerfiles-url)
+  - name: pre-build-push ##########
+    runAfter: ["fetch-dockerfiles"]
+    taskRef:
+      name: pre-build-push
+    workspaces:
+    - name: source
+      workspace: shared-data
+  - name: build-push ##########
+    runAfter: ["pre-build-push"]
+    taskRef:
+      name: kaniko
+    workspaces:
+    - name: source
+      workspace: shared-data
+      subPath: dirSource
+    - name: dockerconfig
+      workspace: docker-credentials
+    params:
+    - name: IMAGE
+      value: $(params.image-reference)
+      value:
+        - --build-arg=BASE=$(tasks.pre-build-push.results.image-base)
+        - --build-arg=REPO=$(tasks.pre-build-push.results.repo-name)
+        - --build-arg=PORTS=$(tasks.pre-build-push.results.image-ports)
