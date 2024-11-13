@@ -20,3 +20,13 @@ Orbital's pipeline currently conists of four tasks:
 3. **pre-build-push** - Runs a custom task to copy over the specified language's dockerfile from the orbital-dockerfiles repo, into the source-code repo (this is all within the shared workspace).
 4. **build-push** - Runs a task to build a Docker image of the source code and if successful, push it to a desired Docker image repository
 
+## Usuage
+
+### Installing Tekton to your cluster
+
+You can either install Tekton by following the official [Tekton Docs]("https://tekton.dev/docs/installation/"), or install version 0.31.0 and the official Tekton CLI by running the `install-tekton.sh` script in the `install` directory of this repo.
+
+
+
+
+
